@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"flag"
 	"strings"
 	"strconv"
 )
@@ -21,8 +22,12 @@ type Request struct {
     Body        string
 }
 
+var dir *string
 
 func main() {
+	dir = flag.String("directory", "/tmp", "Directory where files are stored")
+	flag.Parse()
+
 	fmt.Println("Logs from your program will appear here!")
 
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
@@ -61,6 +66,16 @@ func handleConnection(connection net.Conn) {
     } else if request.Target == "/user-agent" {
         target := request.Headers["User-Agent"]
         connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + strconv.Itoa(len(target)) + "\r\n\r\n" + target))
+    } else if strings.HasPrefix(request.Target, "/files/") {
+        target := request.Target[7:]
+//        *dir
+        buffer, err := os.ReadFile(*dir + "/" + target)
+        if err != nil {
+            connection.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+        } else {
+            str := string(buffer)
+            connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + strconv.Itoa(len(str)) + "\r\n\r\n" + str))
+        }
     } else {
         connection.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
     }
