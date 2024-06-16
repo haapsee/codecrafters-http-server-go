@@ -52,7 +52,12 @@ func handleConnection(connection net.Conn) {
 
     if request.Target == "/" {
         connection.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-    } else {
+    }
+    else if strings.hasPrefix(request.Target, "/echo/") {
+        target := request.Target[6:]
+        connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + len(target) + "\r\n\r\n" + target))
+    }
+    else {
         connection.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
     }
 
