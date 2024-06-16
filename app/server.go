@@ -66,9 +66,8 @@ func handleConnection(connection net.Conn) {
     } else if request.Target == "/user-agent" {
         target := request.Headers["User-Agent"]
         connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + strconv.Itoa(len(target)) + "\r\n\r\n" + target))
-    } else if strings.HasPrefix(request.Target, "/files/") {
+    } else if strings.HasPrefix(request.Target, "/files/") && request.Method == "GET" {
         target := request.Target[7:]
-//        *dir
         buffer, err := os.ReadFile(*dir + "/" + target)
         if err != nil {
             connection.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
@@ -76,6 +75,15 @@ func handleConnection(connection net.Conn) {
             str := string(buffer)
             connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + strconv.Itoa(len(str)) + "\r\n\r\n" + str))
         }
+    } else if strings.HasPrefix(request.Target, "/files/") && request.Method == "POST" {
+        target := request.Target[7:]
+        file, err := os.Create(*dir + "/" + target)
+        if err != nil {
+            fmt.Println("Failed to create file")
+        }
+        defer file.Close()
+        file.Write([]byte(request.Body))
+        connection.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
     } else {
         connection.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
     }
