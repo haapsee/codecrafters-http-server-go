@@ -17,8 +17,9 @@ type Request struct {
     Method      string
     Target      string
     HTTPVersion string
-    Headers     []Header
-    body        string
+//    Headers     []Header
+    Headers     map[string]string
+    Body        string
 }
 
 
@@ -57,6 +58,9 @@ func handleConnection(connection net.Conn) {
     } else if strings.HasPrefix(request.Target, "/echo/") {
         target := request.Target[6:]
         connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + strconv.Itoa(len(target)) + "\r\n\r\n" + target))
+    } else if request.Target == "/user-agent" {
+        target := request.Headers["User-Agent"]
+        connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + strconv.Itoa(len(target)) + "\r\n\r\n" + target))
     } else {
         connection.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
     }
@@ -80,9 +84,8 @@ func parseRequest(requestStr string) Request {
     return Request{method, target, httpVersion, headers, requestStr}
 }
 
-func parseHeaders(requestStr *string) []Header {
-    headers := []Header{}
-
+func parseHeaders(requestStr *string) map[string]string {
+    headers := make(map[string]string)
     for {
         i := strings.Index(*requestStr, "\r\n")
         if i == 0 {
@@ -92,8 +95,25 @@ func parseHeaders(requestStr *string) []Header {
         header := (*requestStr)[:i]
         *requestStr = (*requestStr)[i+2:]
         j := strings.Index(header, ": ")
-        headers = append(headers, Header{header[:j], header[j+2:]})
+        headers[header[:j]] = header[j+2:]
     }
-
     return headers
 }
+
+//func parseHeaders(requestStr *string) []Header {
+//    headers := []Header{}
+//
+//    for {
+//        i := strings.Index(*requestStr, "\r\n")
+//        if i == 0 {
+//            *requestStr = (*requestStr)[2:]
+//            break
+//        }
+//        header := (*requestStr)[:i]
+//        *requestStr = (*requestStr)[i+2:]
+//        j := strings.Index(header, ": ")
+//        headers = append(headers, Header{header[:j], header[j+2:]})
+//    }
+//
+//    return headers
+//}
