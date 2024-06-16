@@ -17,7 +17,6 @@ type Request struct {
     Method      string
     Target      string
     HTTPVersion string
-//    Headers     []Header
     Headers     map[string]string
     Body        string
 }
@@ -32,14 +31,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	connection, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
+    for {
+    	connection, err := l.Accept()
+    	if err != nil {
+    		fmt.Println("Error accepting connection: ", err.Error())
+    		os.Exit(1)
+    	}
+    	defer connection.Close()
+    	go handleConnection(connection)
 	}
-
-	defer connection.Close()
-	handleConnection(connection)
 }
 
 func handleConnection(connection net.Conn) {
@@ -100,20 +100,3 @@ func parseHeaders(requestStr *string) map[string]string {
     return headers
 }
 
-//func parseHeaders(requestStr *string) []Header {
-//    headers := []Header{}
-//
-//    for {
-//        i := strings.Index(*requestStr, "\r\n")
-//        if i == 0 {
-//            *requestStr = (*requestStr)[2:]
-//            break
-//        }
-//        header := (*requestStr)[:i]
-//        *requestStr = (*requestStr)[i+2:]
-//        j := strings.Index(header, ": ")
-//        headers = append(headers, Header{header[:j], header[j+2:]})
-//    }
-//
-//    return headers
-//}
