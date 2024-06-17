@@ -5,8 +5,10 @@ import (
 	"net"
 	"os"
 	"flag"
+	"bytes"
 	"strings"
 	"strconv"
+	"compress/gzip"
 )
 
 type Header struct {
@@ -68,10 +70,10 @@ func handleConnection(connection net.Conn) {
         connection.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
     } else if strings.HasPrefix(request.Target, "/echo/") {
         target := request.Target[6:]
-				connection.Write([]byte(responseOK("text/plain", len(target), target, encoding)))
+				connection.Write([]byte(responseOK("text/plain", target, encoding)))
     } else if request.Target == "/user-agent" {
         target := request.Headers["User-Agent"]
-				connection.Write([]byte(responseOK("text/plain", len(target), target, encoding)))
+				connection.Write([]byte(responseOK("text/plain", target, encoding)))
     } else if strings.HasPrefix(request.Target, "/files/") && request.Method == "GET" {
         target := request.Target[7:]
         buffer, err := os.ReadFile(*dir + "/" + target)
@@ -79,8 +81,7 @@ func handleConnection(connection net.Conn) {
             connection.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
         } else {
             str := string(buffer)
-						connection.Write([]byte(responseOK("application/octet-stream", len(str), str, encoding)))
-            // connection.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + strconv.Itoa(len(str)) + "\r\n\r\n" + str))
+						connection.Write([]byte(responseOK("application/octet-stream", str, encoding)))
         }
     } else if strings.HasPrefix(request.Target, "/files/") && request.Method == "POST" {
         target := request.Target[7:]
@@ -96,15 +97,20 @@ func handleConnection(connection net.Conn) {
     }
 }
 
-func responseOK(contentType string, contentLength int, responseBody string, encoding string) string {
+func responseOK(contentType, responseBody, encoding string) string {
 		response := "HTTP/1.1 200 OK\r\n"
 		response = response + "Content-Type: " + contentType + "\r\n"
-		fmt.Println(encoding)
-		fmt.Println(strings.Contains(encoding, "gzip"))
+
 		if encoding != "" && strings.Contains(encoding, "gzip") {
+				var buffer bytes.Buffer
 				response = response + "Content-Encoding: gzip\r\n"
+				writer := gzip.NewWriter(&buffer)
+				writer.Write([]byte(responseBody))
+				writer.Close()
+				responseBody = buffer.String()
 		}
-		response = response + "Content-Length: " + strconv.Itoa(contentLength) + "\r\n\r\n"
+
+		response = response + "Content-Length: " + strconv.Itoa(len(responseBody)) + "\r\n\r\n"
 		response = response + responseBody
 		return response
 }
