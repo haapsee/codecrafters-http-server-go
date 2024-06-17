@@ -58,11 +58,9 @@ func handleConnection(connection net.Conn) {
     requeststr := string(buffer[:bytesRead])
     request := parseRequest(requeststr)
 
-		acceptEncoding, acceptEncodingExists := request.Headers["Accept-Encoding"]
-		var encoding string
-		if acceptEncodingExists && acceptEncoding == "gzip" {
-				encoding = "gzip"
-		} else {
+		encoding, acceptEncodingExists := request.Headers["Accept-Encoding"]
+
+		if !acceptEncodingExists {
 				encoding = ""
 		}
 
@@ -101,8 +99,10 @@ func handleConnection(connection net.Conn) {
 func responseOK(contentType string, contentLength int, responseBody string, encoding string) string {
 		response := "HTTP/1.1 200 OK\r\n"
 		response = response + "Content-Type: " + contentType + "\r\n"
-		if encoding != "" {
-				response = response + "Content-Encoding: " + encoding + "\r\n"
+		fmt.Println(encoding)
+		fmt.Println(strings.Contains(encoding, "gzip"))
+		if encoding != "" && strings.Contains(encoding, "gzip") {
+				response = response + "Content-Encoding: gzip\r\n"
 		}
 		response = response + "Content-Length: " + strconv.Itoa(contentLength) + "\r\n\r\n"
 		response = response + responseBody
